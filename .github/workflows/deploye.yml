@@ -44,7 +44,7 @@ jobs:
       - name: 'SSH and Deploy'
         run: |
           gcloud compute ssh ${{ secrets.GCP_VM_NAME }} \
-            --zone=asia-south1-a \
+            --zone=us-central1-c \
             --quiet \
             --command="
               PROJECT_DIR='/var/www/backend'
