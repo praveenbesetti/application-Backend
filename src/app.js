@@ -1,18 +1,18 @@
-const express      = require('express');
-const cors         = require('cors');
-const helmet       = require('helmet');
-const morgan       = require('morgan');
-const rateLimit    = require('express-rate-limit');
-const multer       = require('multer');
-const path         = require('path');
-const fs           = require('fs');
-const { parse }    = require('csv-parse');
-const xlsx         = require('xlsx');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { parse } = require('csv-parse');
+const xlsx = require('xlsx');
 const errorHandler = require('./middleware/errorHandler');
-const Route        = require('../src/routes/index');
+const Route = require('../src/routes/index');
 const { processAllRows } = require('../src/controllers/upsert');
 
-const app    = express();
+const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
 
 // ── Ensure uploads temp dir ────────────────────────────────
@@ -22,10 +22,10 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 // ── Security ───────────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
-  origin: (origin, callback) => callback(null, true),
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
+  origin: true, // This allows any origin to connect
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret']
 }));
 
 // ── Parsing (MUST be before routes) ───────────────────────
@@ -48,21 +48,21 @@ const apiLimiter = rateLimit({
   message: { success: false, message: 'Too many requests.' },
 });
 app.use('/api/auth', authLimiter);
-app.use('/api',      apiLimiter);
+app.use('/api', apiLimiter);
 
-app.use('/api/auth',       require('./routes/auth.routes'));
+app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/categories', require('./routes/category.routes'));
-app.use('/api/products',   require('./routes/product.routes'));
-app.use('/api/banners',    require('./routes/banner.routes'));
-app.use('/api/cart',       require('./routes/cart.routes'));
-app.use('/api/admin',      require('./routes/admin.routes'));
+app.use('/api/products', require('./routes/product.routes'));
+app.use('/api/banners', require('./routes/banner.routes'));
+app.use('/api/cart', require('./routes/cart.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
 // ── Health check ───────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.0.0', ts: new Date() });
 });
 
 // ── Admin pages ────────────────────────────────────────────
-app.get('/admin',  (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'index.html')));
+app.get('/admin', (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'index.html')));
 app.get('/survey', (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'survey.html')));
 
 // ── CSV/XLSX Upload ────────────────────────────────────────
@@ -75,7 +75,7 @@ function parseCSV(buffer) {
 }
 function parseXLSX(buffer) {
   const workbook = xlsx.read(buffer, { type: 'buffer' });
-  const sheet    = workbook.Sheets[workbook.SheetNames[0]];
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
   return xlsx.utils.sheet_to_json(sheet, { defval: '' });
 }
 
@@ -105,13 +105,13 @@ app.post('/api/upload', upload.single('csv'), async (req, res) => {
 });
 
 // ── API Routes ─────────────────────────────────────────────
-app.use('/api', Route);
+
 
 // ── 404 ────────────────────────────────────────────────────
 app.use((req, res) => {
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.path} not found` });
 });
-
+app.use('/api', Route);
 // ── Error handler ──────────────────────────────────────────
 app.use(errorHandler);
 
