@@ -22,7 +22,7 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 // ── Security & CORS ────────────────────────────────────────
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
-  origin: true, 
+  origin: "*", 
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret']
@@ -56,7 +56,7 @@ app.use('/api/cart',       require('./routes/cart.routes'));
 app.use('/api/admin',      require('./routes/admin.routes'));
 
 // Main Route handler (Handles Surveys, Districts, Mandals, etc.)
-// app.use('/api', Route);
+app.use('/api', Route);
 
 // ── Health Check ───────────────────────────────────────────
 app.get('/health', (req, res) => {
