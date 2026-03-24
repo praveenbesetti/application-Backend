@@ -56,7 +56,7 @@ app.use('/api/cart',       require('./routes/cart.routes'));
 app.use('/api/admin',      require('./routes/admin.routes'));
 
 // Main Route handler (Handles Surveys, Districts, Mandals, etc.)
-app.use('/api', Route);
+// app.use('/api', Route);
 
 // ── Health Check ───────────────────────────────────────────
 app.get('/health', (req, res) => {
