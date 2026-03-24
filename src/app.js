@@ -9,7 +9,7 @@ const fs           = require('fs');
 const { parse }    = require('csv-parse');
 const xlsx         = require('xlsx');
 const errorHandler = require('./middleware/errorHandler');
-const Route        = require('./routes/index'); // Centralized routes
+const Route        = require('./routes/index');
 const { processAllRows } = require('./controllers/upsert');
 
 const app    = express();
@@ -19,16 +19,31 @@ const upload = multer({ storage: multer.memoryStorage() });
 const uploadsDir = path.join(__dirname, '..', 'uploads', 'temp');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// ── Security & CORS ────────────────────────────────────────
-app.use(helmet({ contentSecurityPolicy: false }));
-app.use(cors({
-  origin: "*",
+// ── CORS (MUST be before helmet and everything else) ───────
+const corsOptions = {
+  origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret']
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // ← Handle ALL preflight requests
+
+// ── Security ───────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: false,   // ← Stops helmet blocking cross-origin
+  crossOriginEmbedderPolicy: false,   // ← Stops helmet blocking embeds
 }));
 
+// ── Debug Logger (remove in production) ───────────────────
+app.use((req, res, next) => {
+  console.log(`→ ${req.method} ${req.path}`);
+  next();
+});
+
 // ── Parsing ────────────────────────────────────────────────
-app.use(express.json({ limit: '5mb' })); // Increased for larger data
+app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
@@ -38,15 +53,18 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // ── Rate Limiting ──────────────────────────────────────────
 const apiLimiter = rateLimit({
-  windowMs: 60 * 1000, 
-  max: 500, 
+  windowMs: 60 * 1000,
+  max: 500,
   message: { success: false, message: 'Too many requests.' },
 });
 app.use('/api', apiLimiter);
 
-// ── API Routes (ORDER MATTERS - MUST BE ABOVE 404) ─────────
+// ── Health Check ───────────────────────────────────────────
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.0.0', ts: new Date() });
+});
 
-// Manual imports for specific QuickBasket features
+// ── API Routes (ORDER MATTERS) ─────────────────────────────
 app.use('/api/auth',       require('./routes/auth.routes'));
 app.use('/api/categories', require('./routes/category.routes'));
 app.use('/api/products',   require('./routes/product.routes'));
@@ -54,19 +72,14 @@ app.use('/api/banners',    require('./routes/banner.routes'));
 app.use('/api/cart',       require('./routes/cart.routes'));
 app.use('/api/admin',      require('./routes/admin.routes'));
 
-// Main Route handler (Handles Surveys, Districts, Mandals, etc.)
+// Main Route handler (Surveys, Districts, Mandals, etc.)
 app.use('/api', Route);
-
-// ── Health Check ───────────────────────────────────────────
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.0.0', ts: new Date() });
-});
 
 // ── Admin Pages ────────────────────────────────────────────
 app.get('/admin',  (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'index.html')));
 app.get('/survey', (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'survey.html')));
 
-// ── CSV/XLSX Upload Logic ──────────────────────────────────
+// ── CSV/XLSX Upload ────────────────────────────────────────
 function parseCSV(buffer) {
   return new Promise((resolve, reject) => {
     parse(buffer, { columns: true, skip_empty_lines: true, trim: true },
