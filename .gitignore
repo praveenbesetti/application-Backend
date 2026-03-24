@@ -1,0 +1,11 @@
+node_modules/
+.env
+uploads/
+*.log
+.DS_Store
+upload-images.js
+storage-key.json
+seed/
+genrate-csv
+image-urls.txt
+images/

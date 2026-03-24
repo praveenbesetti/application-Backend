@@ -1,0 +1,77 @@
+name: Production Docker Build & Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Authenticate with Google Cloud
+      - id: 'auth'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          # Ensure this name matches your GitHub Secret name exactly!
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: 'Set up Cloud SDK'
+        uses: 'google-github-actions/setup-gcloud@v2'
+
+      # 2. Login to Artifact Registry so we can push
+      - name: Docker Auth
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      # 3. Build the image using the Git files (.) and push to Registry
+      - name: Build and Push
+        run: |
+          docker build -t asia-south1-docker.pkg.dev/secure-487209/myfarmapp/backend-api:latest .
+          docker push asia-south1-docker.pkg.dev/secure-487209/myfarmapp/backend-api:latest
+
+      # 4. Convert config files to Base64 for safe transfer
+      - name: Prepare Configs
+        run: |
+          echo "COMPOSE_B64=$(base64 -w 0 docker-compose.yml)" >> "$GITHUB_ENV"
+          echo "NGINX_B64=$(base64 -w 0 nginx.conf)" >> "$GITHUB_ENV"
+
+      # 5. SSH to VM: Pull the new image and restart containers
+      # VM DEPLOYMENT
+      # VM DEPLOYMENT
+      # 5. SSH to VM: Pull the new image and restart containers
+      - name: 'SSH and Deploy'
+        run: |
+          gcloud compute ssh ${{ secrets.GCP_VM_NAME }} \
+            --zone=asia-south1-a \
+            --quiet \
+            --command="
+              PROJECT_DIR='/var/www/backend'
+              
+              sudo mkdir -p \$PROJECT_DIR
+              sudo chown -R \$USER:\$USER \$PROJECT_DIR
+              cd \$PROJECT_DIR
+
+              # 2. Recreate host files
+              echo '${{ env.COMPOSE_B64 }}' | base64 -d | sudo tee docker-compose.yml > /dev/null
+              echo '${{ env.NGINX_B64 }}' | base64 -d | sudo tee nginx.conf > /dev/null
+              echo '${{ secrets.ENV_FILE_CONTENT }}' | sudo tee .env > /dev/null
+
+              # 3. Authenticate Docker on the VM
+              sudo gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+              # 4. PULL & RECREATE (The Fix)
+              if sudo docker compose version > /dev/null 2>&1; then
+                sudo docker compose pull backend-api
+                # --force-recreate ensures the container is replaced even if it looks the same
+                sudo docker compose up -d --force-recreate
+              else
+                sudo docker-compose pull backend-api
+                sudo docker-compose up -d --force-recreate
+              fi
+
+              # Clean up old images to save disk space
+              sudo docker image prune -f
+              echo '✅ Deployment successful and container recreated!'
+            "

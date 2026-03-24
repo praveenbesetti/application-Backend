@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>QuickBasket Admin</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#16a05a;--green-light:#e8f8ef;--green-dark:#0d7a42;
+  --orange:#f95d2b;--red:#dc2626;--blue:#2563eb;
+  --dark:#0f172a;--text:#1e293b;--muted:#64748b;
+  --border:#e2e8f0;--bg:#f8fafc;--white:#ffffff;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ── Layout ── */
+.layout{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{background:var(--dark);color:#fff;padding:0;display:flex;flex-direction:column}
+.brand{padding:24px 20px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
+.brand h1{font-size:1.2rem;font-weight:800;color:#fff}
+.brand span{background:var(--green);border-radius:8px;padding:2px 8px;font-size:.85rem}
+nav{padding:16px 12px;flex:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;font-size:.88rem;font-weight:600;color:rgba(255,255,255,.65);transition:all .18s;margin-bottom:4px;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav-item.active{background:var(--green);color:#fff}
+.nav-item .icon{font-size:1.1rem;width:22px;text-align:center;flex-shrink:0}
+.sidebar-footer{padding:16px;border-top:1px solid rgba(255,255,255,.1);font-size:.78rem;color:rgba(255,255,255,.4)}
+
+/* ── Main ── */
+.main{padding:0;overflow:auto}
+.topbar{background:#fff;border-bottom:1px solid var(--border);padding:16px 28px;display:flex;align-items:center;justify-content:space-between}
+.topbar h2{font-size:1.1rem;font-weight:700;color:var(--dark)}
+.secret-input{display:flex;align-items:center;gap:8px}
+.secret-input label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.secret-input input{border:1.5px solid var(--border);border-radius:8px;padding:6px 12px;font-size:.84rem;outline:none;width:200px}
+.secret-input input:focus{border-color:var(--green)}
+
+.content{padding:28px}
+
+/* ── Stats ── */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px}
+.stat-card{background:#fff;border-radius:14px;border:1.5px solid var(--border);padding:20px 24px}
+.stat-card .num{font-size:2rem;font-weight:800;color:var(--dark);font-family:Georgia,serif}
+.stat-card .lbl{font-size:.82rem;color:var(--muted);font-weight:600;margin-top:4px}
+
+/* ── Panels ── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── Card ── */
+.card{background:#fff;border-radius:16px;border:1.5px solid var(--border);padding:24px;margin-bottom:20px}
+.card h3{font-size:1rem;font-weight:700;color:var(--dark);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+
+/* ── Forms ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-row.full{grid-template-columns:1fr}
+.field label{display:block;font-size:.78rem;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.field input,.field select,.field textarea{
+  width:100%;border:1.5px solid var(--border);border-radius:10px;padding:9px 12px;
+  font-size:.88rem;outline:none;font-family:inherit;color:var(--text);
+  transition:border-color .2s;background:#fff
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--green)}
+.field textarea{min-height:80px;resize:vertical}
+
+/* ── CSV Upload Zone ── */
+.upload-zone{
+  border:2px dashed var(--border);border-radius:14px;padding:36px;
+  text-align:center;cursor:pointer;transition:all .2s;background:#fafafa;
+  position:relative;
+}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--green);background:var(--green-light)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone .icon{font-size:2.5rem;margin-bottom:10px}
+.upload-zone p{font-weight:600;color:var(--dark);margin-bottom:4px}
+.upload-zone span{font-size:.82rem;color:var(--muted)}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;border:none;transition:all .18s;font-family:inherit}
+.btn-green{background:var(--green);color:#fff;box-shadow:0 4px 12px rgba(22,160,90,.25)}
+.btn-green:hover{background:var(--green-dark);transform:translateY(-1px)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{opacity:.9}
+.btn-outline{background:#fff;color:var(--text);border:1.5px solid var(--border)}
+.btn-outline:hover{border-color:var(--green);color:var(--green)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
+
+/* ── Table ── */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1.5px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+thead{background:#f8fafc}
+th{padding:12px 16px;text-align:left;font-size:.72rem;font-weight:800;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+td{padding:12px 16px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+.badge{display:inline-block;padding:2px 8px;border-radius:100px;font-size:.68rem;font-weight:800;text-transform:uppercase}
+.badge-green{background:#dcfce7;color:#16a34a}
+.badge-orange{background:#fff7ed;color:#ea580c}
+.badge-gray{background:#f1f5f9;color:#64748b}
+
+/* ── Alert ── */
+.alert{padding:12px 16px;border-radius:10px;font-size:.86rem;font-weight:600;margin-bottom:16px;display:none}
+.alert.show{display:block}
+.alert-success{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.alert-error{background:#fee2e2;color:#dc2626;border:1px solid #fecaca}
+.alert-info{background:#dbeafe;color:#1d4ed8;border:1px solid #bfdbfe}
+
+/* ── CSV template hint ── */
+.csv-hint{background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-top:14px;font-size:.8rem}
+.csv-hint strong{color:var(--dark)}
+.csv-hint code{background:#e2e8f0;padding:1px 6px;border-radius:4px;font-size:.78rem;color:var(--dark)}
+
+/* ── Loading spinner ── */
+.spin{animation:spin 1s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Tabs inside card ── */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg);border-radius:10px;padding:4px}
+.tab{padding:8px 16px;border-radius:8px;cursor:pointer;font-size:.84rem;font-weight:600;color:var(--muted);transition:all .18s;border:none;background:none;font-family:inherit}
+.tab.active{background:#fff;color:var(--green);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+
+/* ── Pagination ── */
+.pagination{display:flex;align-items:center;gap:8px;margin-top:16px;justify-content:center}
+.page-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--border);background:#fff;cursor:pointer;font-size:.84rem;font-weight:600;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.page-btn:hover,.page-btn.active{background:var(--green);color:#fff;border-color:var(--green)}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <h1>QuickBasket</h1>
+      <span>Admin</span>
+    </div>
+    <nav>
+      <button class="nav-item active" onclick="showPanel('dashboard')"><span class="icon">📊</span> Dashboard</button>
+      <button class="nav-item" onclick="showPanel('products')"><span class="icon">📦</span> Products</button>
+      <button class="nav-item" onclick="showPanel('categories')"><span class="icon">🗂️</span> Categories</button>
+      <button class="nav-item" onclick="showPanel('banners')"><span class="icon">🖼️</span> Banners</button>
+      <button class="nav-item" onclick="showPanel('csvupload')"><span class="icon">📤</span> CSV Upload</button>
+    </nav>
+    <div class="sidebar-footer">QuickBasket v1.0 · Admin Panel</div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+    <!-- Topbar -->
+    <div class="topbar">
+      <h2 id="page-title">Dashboard</h2>
+      <div class="secret-input">
+        <label>Admin Secret</label>
+        <input type="password" id="adminSecret" placeholder="Enter admin secret key" />
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="panel active" id="panel-dashboard">
+        <div class="stats" id="statsGrid">
+          <div class="stat-card"><div class="num" id="stat-products">—</div><div class="lbl">Total Products</div></div>
+          <div class="stat-card"><div class="num" id="stat-categories">—</div><div class="lbl">Categories</div></div>
+          <div class="stat-card"><div class="num" id="stat-banners">—</div><div class="lbl">Active Banners</div></div>
+        </div>
+        <div class="card">
+          <h3>📊 Products by Category</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Category</th><th>Products</th></tr></thead>
+              <tbody id="catStatsBody"><tr><td colspan="2" style="text-align:center;color:var(--muted)">Click Refresh to load</td></tr></tbody>
+            </table>
+          </div>
+          <br>
+          <button class="btn btn-green" onclick="loadStats()">🔄 Refresh Stats</button>
+        </div>
+      </div>
+
+      <!-- ── PRODUCTS ── -->
+      <div class="panel" id="panel-products">
+        <div id="prod-alert" class="alert"></div>
+
+        <!-- Filter -->
+        <div class="card" style="padding:16px 20px">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <select id="prodCatFilter" style="border:1.5px solid var(--border);border-radius:8px;padding:7px 12px;font-size:.84rem;outline:none">
+              <option value="">All Categories</option>
+            </select>
+            <button class="btn btn-outline" onclick="loadProducts()">🔍 Filter</button>
+            <button class="btn btn-green" onclick="showAddProduct()" style="margin-left:auto">+ Add Product</button>
+          </div>
+        </div>
+
+        <!-- Add/Edit form -->
+        <div class="card" id="productForm" style="display:none">
+          <h3 id="productFormTitle">➕ Add Product</h3>
+          <div class="form-row">
+            <div class="field"><label>Name *</label><input type="text" id="pName" placeholder="Aashirvaad Atta"/></div>
+            <div class="field"><label>Unit *</label><input type="text" id="pUnit" placeholder="5 kg"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Price (₹) *</label><input type="number" id="pPrice" placeholder="249"/></div>
+            <div class="field"><label>Old Price (₹)</label><input type="number" id="pOldPrice" placeholder="Leave blank if no discount"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Category Slug *</label>
+              <select id="pCatSlug">
+                <option value="">Select category</option>
+              </select>
+            </div>
+            <div class="field"><label>Subcategory ID *</label><input type="text" id="pSubcat" placeholder="atta"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Emoji</label><input type="text" id="pEmoji" placeholder="🌾"/></div>
+            <div class="field"><label>Badge</label><input type="text" id="pBadge" placeholder="BEST SELLER / FRESH / null"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Stock</label><input type="number" id="pStock" placeholder="999"/></div>
+            <div class="field"><label>Sort Order</label><input type="number" id="pSortOrder" placeholder="1"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Featured</label>
+              <select id="pFeatured"><option value="false">No</option><option value="true">Yes</option></select>
+            </div>
+            <div class="field"><label>Active</label>
+              <select id="pActive"><option value="true">Yes</option><option value="false">No</option></select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:8px">
+            <button class="btn btn-green" onclick="saveProduct()">💾 Save Product</button>
+            <button class="btn btn-outline" onclick="document.getElementById('productForm').style.display='none'">Cancel</button>
+          </div>
+          <input type="hidden" id="pEditId"/>
+        </div>
+
+        <!-- Table -->
+        <div class="card">
+          <h3>📦 Products <span id="prodCount" style="font-size:.8rem;color:var(--muted);font-weight:500"></span></h3>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Product</th><th>Category</th><th>Subcat</th>
+                  <th>Price</th><th>Stock</th><th>Status</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="productsBody">
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CATEGORIES ── -->
+      <div class="panel" id="panel-categories">
+        <div id="cat-alert" class="alert"></div>
+
+        <!-- Add form -->
+        <div class="card">
+          <h3>➕ Add / Update Category</h3>
+          <div class="form-row">
+            <div class="field"><label>Slug * (URL-safe, lowercase)</label><input type="text" id="cSlug" placeholder="groceries"/></div>
+            <div class="field"><label>Name *</label><input type="text" id="cName" placeholder="Groceries"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Emoji</label><input type="text" id="cEmoji" placeholder="🛒"/></div>
+            <div class="field"><label>Sub-title</label><input type="text" id="cSub" placeholder="Wheat, Rice, Oil…"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Color (text)</label><input type="text" id="cColor" placeholder="#2a7d4f"/></div>
+            <div class="field"><label>Background</label><input type="text" id="cBg" placeholder="#eaf7f0"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Sort Order</label><input type="number" id="cSortOrder" placeholder="1"/></div>
+            <div class="field"><label>Featured</label>
+              <select id="cFeatured"><option value="true">Yes</option><option value="false">No</option></select>
+            </div>
+          </div>
+          <button class="btn btn-green" onclick="saveCategory()">💾 Save Category</button>
+        </div>
+
+        <!-- List -->
+        <div class="card">
+          <h3>🗂️ All Categories</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Emoji</th><th>Name</th><th>Slug</th><th>Subcats</th><th>Featured</th><th>Order</th></tr></thead>
+              <tbody id="catsBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <br>
+          <button class="btn btn-outline" onclick="loadCategories()">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- ── BANNERS ── -->
+      <div class="panel" id="panel-banners">
+        <div id="ban-alert" class="alert"></div>
+
+        <div class="card">
+          <h3 id="banFormTitle">➕ Add Banner</h3>
+          <div class="form-row">
+            <div class="field"><label>Title *</label><input type="text" id="bTitle" placeholder="Fresh Groceries"/></div>
+            <div class="field"><label>Subtitle</label><input type="text" id="bSubtitle" placeholder="Delivered Instantly"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Emoji</label><input type="text" id="bEmoji" placeholder="🥦"/></div>
+            <div class="field"><label>CTA Button Text</label><input type="text" id="bCta" placeholder="Shop Now"/></div>
+          </div>
+          <div class="form-row full">
+            <div class="field"><label>CTA Link</label><input type="text" id="bCtaLink" placeholder="/category/groceries"/></div>
+          </div>
+          <div class="form-row full">
+            <div class="field"><label>Gradient CSS</label><input type="text" id="bGradient" placeholder="linear-gradient(135deg,#0f1c14,#1a9e5f)"/></div>
+          </div>
+          <div class="form-row">
+            <div class="field"><label>Sort Order</label><input type="number" id="bSortOrder" placeholder="1"/></div>
+            <div class="field"><label>Active</label>
+              <select id="bActive"><option value="true">Yes</option><option value="false">No</option></select>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px">
+            <button class="btn btn-green" onclick="saveBanner()">💾 Save Banner</button>
+            <button class="btn btn-outline" onclick="resetBannerForm()">Reset</button>
+          </div>
+          <input type="hidden" id="bEditId"/>
+        </div>
+
+        <div class="card">
+          <h3>🖼️ All Banners</h3>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Emoji</th><th>Title</th><th>CTA</th><th>Order</th><th>Active</th><th>Actions</th></tr></thead>
+              <tbody id="bannersBody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <br>
+          <button class="btn btn-outline" onclick="loadBanners()">🔄 Refresh</button>
+        </div>
+      </div>
+
+      <!-- ── CSV UPLOAD ── -->
+      <div class="panel" id="panel-csvupload">
+        <div id="csv-alert" class="alert"></div>
+
+        <div class="card">
+          <h3>📤 Upload Products CSV</h3>
+          <p style="color:var(--muted);font-size:.86rem;margin-bottom:16px">
+            Upload a CSV file to bulk insert or update products. Existing products (same name + category) will be updated.
+          </p>
+
+          <div class="upload-zone" id="prodUploadZone">
+            <input type="file" id="prodCsvFile" accept=".csv" onchange="handleFileSelect('prod')"/>
+            <div class="icon">📄</div>
+            <p>Drop CSV file here or click to browse</p>
+            <span id="prodFileName">No file selected</span>
+          </div>
+
+          <div class="csv-hint">
+            <strong>Required columns:</strong>
+            <code>name</code> <code>unit</code> <code>price</code> <code>categorySlug</code> <code>subcategoryId</code><br><br>
+            <strong>Optional:</strong>
+            <code>oldPrice</code> <code>emoji</code> <code>badge</code> <code>stock</code> <code>featured</code> <code>active</code> <code>tags</code><br><br>
+            <strong>Example row:</strong><br>
+            <code>Aashirvaad Atta,5 kg,249,290,🌾,BEST SELLER,groceries,atta,999,true,true,organic|bestseller</code>
+          </div>
+
+          <br>
+          <button class="btn btn-green" onclick="uploadCSV('products')" id="prodUploadBtn">
+            📤 Upload Products
+          </button>
+          <a href="/sample-products.csv" style="margin-left:12px;font-size:.84rem;color:var(--green)" onclick="downloadSampleCSV(event,'products')">
+            ⬇️ Download Sample CSV
+          </a>
+        </div>
+
+        <div class="card">
+          <h3>📤 Upload Categories CSV</h3>
+          <div class="upload-zone" id="catUploadZone">
+            <input type="file" id="catCsvFile" accept=".csv" onchange="handleFileSelect('cat')"/>
+            <div class="icon">📄</div>
+            <p>Drop CSV file here or click to browse</p>
+            <span id="catFileName">No file selected</span>
+          </div>
+
+          <div class="csv-hint">
+            <strong>Required columns:</strong>
+            <code>slug</code> <code>name</code><br><br>
+            <strong>Optional:</strong>
+            <code>emoji</code> <code>imageUrl</code> <code>color</code> <code>bg</code> <code>sub</code> <code>sortOrder</code> <code>featured</code> <code>active</code><br><br>
+            <strong>Example row:</strong><br>
+            <code>vegetables,Vegetables,🥦,https://storage.googleapis.com/bucket/veg.jpg,#1a9e5f,#f0faf4,Leafy Root & More,2,true,true</code>
+          </div>
+
+          <br>
+          <button class="btn btn-green" onclick="uploadCSV('categories')" id="catUploadBtn">
+            📤 Upload Categories
+          </button>
+          <a href="#" style="margin-left:12px;font-size:.84rem;color:var(--green)" onclick="downloadSampleCSV(event,'categories')">
+            ⬇️ Download Sample CSV
+          </a>
+        </div>
+
+        <div class="card">
+          <h3>📤 Upload Subcategories CSV</h3>
+          <p style="color:var(--muted);font-size:.86rem;margin-bottom:16px">
+            Upload subcategories for any category. Existing subcategories (same slug + category) will be updated.
+          </p>
+
+          <div class="upload-zone" id="subUploadZone">
+            <input type="file" id="subCsvFile" accept=".csv" onchange="handleFileSelect('sub')"/>
+            <div class="icon">📄</div>
+            <p>Drop CSV file here or click to browse</p>
+            <span id="subFileName">No file selected</span>
+          </div>
+
+          <div class="csv-hint">
+            <strong>Required columns:</strong>
+            <code>slug</code> <code>name</code> <code>categorySlug</code><br><br>
+            <strong>Optional:</strong>
+            <code>emoji</code> <code>imageUrl</code> <code>sortOrder</code> <code>featured</code> <code>active</code><br><br>
+            <strong>Example row:</strong><br>
+            <code>leafy,Leafy Greens,🥬,https://storage.googleapis.com/bucket/leafy.jpg,vegetables,1,false,true</code>
+          </div>
+
+          <br>
+          <button class="btn btn-green" onclick="uploadCSV('subcategories')" id="subUploadBtn">
+            📤 Upload Subcategories
+          </button>
+          <a href="#" style="margin-left:12px;font-size:.84rem;color:var(--green)" onclick="downloadSampleCSV(event,'subcategories')">
+            ⬇️ Download Sample CSV
+          </a>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /layout -->
+
+<script>
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000/api'
+  : '/api';
+
+// ── Helpers ──────────────────────────────────────────────
+const secret = () => document.getElementById('adminSecret').value;
+const adminHeaders = () => ({ 'Content-Type':'application/json', 'x-admin-secret': secret() });
+
+function showAlert(panelId, msg, type='info') {
+  const el = document.getElementById(panelId+'-alert');
+  el.textContent = msg;
+  el.className = `alert alert-${type} show`;
+  setTimeout(() => el.classList.remove('show'), 5000);
+}
+
+function showPanel(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-'+name).classList.add('active');
+  event.currentTarget.classList.add('active');
+  document.getElementById('page-title').textContent =
+    {dashboard:'Dashboard',products:'Products',categories:'Categories',banners:'Banners',csvupload:'CSV Upload'}[name];
+
+  if (name === 'dashboard') loadStats();
+  if (name === 'products')  { loadCategories(true); loadProducts(); }
+  if (name === 'categories'){ loadCategories(); }
+  if (name === 'banners')   loadBanners();
+}
+
+// ── Stats ────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const r = await fetch(`${API}/admin/stats`, { headers:{'x-admin-secret':secret()} });
+    const d = await r.json();
+    if (!d.success) return;
+    document.getElementById('stat-products').textContent   = d.data.totalProducts;
+    document.getElementById('stat-categories').textContent = d.data.totalCategories;
+    document.getElementById('stat-banners').textContent    = d.data.totalBanners;
+
+    const tbody = document.getElementById('catStatsBody');
+    tbody.innerHTML = d.data.productsByCategory.map(c =>
+      `<tr><td>${c._id}</td><td><strong>${c.count}</strong></td></tr>`
+    ).join('') || '<tr><td colspan="2">No data</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+// ── Products ─────────────────────────────────────────────
+async function loadProducts() {
+  const cat = document.getElementById('prodCatFilter')?.value || '';
+  const url = `${API}/admin/products?${cat ? 'category='+cat : ''}&limit=50`;
+  try {
+    const r = await fetch(url, { headers:{'x-admin-secret':secret()} });
+    const d = await r.json();
+    document.getElementById('prodCount').textContent = `(${d.total || 0} total)`;
+    const tbody = document.getElementById('productsBody');
+    if (!d.data?.length) { tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px">No products found</td></tr>'; return; }
+    tbody.innerHTML = d.data.map(p => `
+      <tr>
+        <td>${p.emoji || ''} <strong>${p.name}</strong><br><small style="color:var(--muted)">${p.unit}</small></td>
+        <td><span class="badge badge-gray">${p.categorySlug}</span></td>
+        <td>${p.subcategoryId}</td>
+        <td>₹${p.price}${p.oldPrice ? `<br><small style="text-decoration:line-through;color:var(--muted)">₹${p.oldPrice}</small>` : ''}</td>
+        <td>${p.stock}</td>
+        <td><span class="badge ${p.active ? 'badge-green':'badge-gray'}">${p.active ? 'Active':'Inactive'}</span></td>
+        <td>
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:.78rem" onclick="editProduct('${p._id}','${p.name.replace(/'/g,"\\'")}','${p.unit}',${p.price},${p.oldPrice||'null'},'${p.categorySlug}','${p.subcategoryId}','${p.emoji||''}','${p.badge||''}',${p.stock},${p.sortOrder||0},'${p.featured}','${p.active}')">✏️ Edit</button>
+          <button class="btn btn-red" style="padding:5px 10px;font-size:.78rem;margin-left:6px" onclick="deleteProduct('${p._id}','${p.name}')">🗑</button>
+        </td>
+      </tr>`).join('');
+  } catch(e) { showAlert('prod','Failed to load products: '+e.message,'error'); }
+}
+
+function showAddProduct() {
+  clearProductForm();
+  document.getElementById('productFormTitle').textContent = '➕ Add Product';
+  document.getElementById('productForm').style.display = 'block';
+  document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
+}
+
+function editProduct(id,name,unit,price,oldPrice,cat,sub,emoji,badge,stock,sort,featured,active) {
+  document.getElementById('productFormTitle').textContent = '✏️ Edit Product';
+  document.getElementById('pEditId').value      = id;
+  document.getElementById('pName').value        = name;
+  document.getElementById('pUnit').value        = unit;
+  document.getElementById('pPrice').value       = price;
+  document.getElementById('pOldPrice').value    = oldPrice !== 'null' ? oldPrice : '';
+  document.getElementById('pCatSlug').value     = cat;
+  document.getElementById('pSubcat').value      = sub;
+  document.getElementById('pEmoji').value       = emoji;
+  document.getElementById('pBadge').value       = badge !== 'null' ? badge : '';
+  document.getElementById('pStock').value       = stock;
+  document.getElementById('pSortOrder').value   = sort;
+  document.getElementById('pFeatured').value    = featured;
+  document.getElementById('pActive').value      = active;
+  document.getElementById('productForm').style.display = 'block';
+  document.getElementById('productForm').scrollIntoView({behavior:'smooth'});
+}
+
+function clearProductForm() {
+  ['pEditId','pName','pUnit','pPrice','pOldPrice','pSubcat','pEmoji','pBadge','pStock','pSortOrder'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('pCatSlug').value   = '';
+  document.getElementById('pFeatured').value  = 'false';
+  document.getElementById('pActive').value    = 'true';
+}
+
+async function saveProduct() {
+  const editId = document.getElementById('pEditId').value;
+  const body = {
+    name:          document.getElementById('pName').value.trim(),
+    unit:          document.getElementById('pUnit').value.trim(),
+    price:         parseFloat(document.getElementById('pPrice').value),
+    oldPrice:      document.getElementById('pOldPrice').value ? parseFloat(document.getElementById('pOldPrice').value) : null,
+    categorySlug:  document.getElementById('pCatSlug').value,
+    subcategoryId: document.getElementById('pSubcat').value.trim(),
+    emoji:         document.getElementById('pEmoji').value.trim() || '📦',
+    badge:         document.getElementById('pBadge').value.trim() || null,
+    stock:         parseInt(document.getElementById('pStock').value) || 999,
+    sortOrder:     parseInt(document.getElementById('pSortOrder').value) || 0,
+    featured:      document.getElementById('pFeatured').value === 'true',
+    active:        document.getElementById('pActive').value === 'true',
+  };
+  if (!body.name || !body.unit || !body.price || !body.categorySlug || !body.subcategoryId) {
+    return showAlert('prod','Please fill all required fields','error');
+  }
+  try {
+    const url    = editId ? `${API}/admin/products/${editId}` : `${API}/admin/products`;
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers: adminHeaders(), body: JSON.stringify(body) });
+    const d = await r.json();
+    if (!d.success) return showAlert('prod', d.message, 'error');
+    showAlert('prod', `Product ${editId ? 'updated' : 'created'} successfully ✅`, 'success');
+    document.getElementById('productForm').style.display = 'none';
+    clearProductForm();
+    loadProducts();
+  } catch(e) { showAlert('prod', e.message, 'error'); }
+}
+
+async function deleteProduct(id, name) {
+  if (!confirm(`Deactivate "${name}"?`)) return;
+  try {
+    const r = await fetch(`${API}/admin/products/${id}`, { method:'DELETE', headers:{'x-admin-secret':secret()} });
+    const d = await r.json();
+    if (d.success) { showAlert('prod','Product deactivated ✅','success'); loadProducts(); }
+    else showAlert('prod', d.message, 'error');
+  } catch(e) { showAlert('prod', e.message, 'error'); }
+}
+
+// ── Categories ───────────────────────────────────────────
+let allCats = [];
+async function loadCategories(forDropdown=false) {
+  try {
+    const r = await fetch(`${API}/categories`);
+    const d = await r.json();
+    allCats  = d.data || [];
+
+    // Fill dropdowns
+    const selects = ['prodCatFilter','pCatSlug'].map(id => document.getElementById(id)).filter(Boolean);
+    selects.forEach(sel => {
+      const val = sel.value;
+      sel.innerHTML = sel.id === 'prodCatFilter'
+        ? '<option value="">All Categories</option>'
+        : '<option value="">Select category</option>';
+      allCats.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.slug; opt.textContent = `${c.emoji} ${c.name}`;
+        sel.appendChild(opt);
+      });
+      sel.value = val;
+    });
+
+    if (forDropdown) return;
+
+    const tbody = document.getElementById('catsBody');
+    tbody.innerHTML = allCats.map(c => `
+      <tr>
+        <td style="font-size:1.4rem">${c.emoji}</td>
+        <td><strong>${c.name}</strong></td>
+        <td><code style="background:var(--bg);padding:2px 8px;border-radius:6px;font-size:.8rem">${c.slug}</code></td>
+        <td>${c.subcategories?.length || 0}</td>
+        <td><span class="badge ${c.featured ? 'badge-green':'badge-gray'}">${c.featured ? 'Yes':'No'}</span></td>
+        <td>${c.sortOrder}</td>
+      </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted)">No categories</td></tr>';
+  } catch(e) { console.error(e); }
+}
+
+async function saveCategory() {
+  const slug = document.getElementById('cSlug').value.trim().toLowerCase();
+  const body = {
+    slug,
+    name:      document.getElementById('cName').value.trim(),
+    emoji:     document.getElementById('cEmoji').value.trim() || '📦',
+    sub:       document.getElementById('cSub').value.trim(),
+    color:     document.getElementById('cColor').value.trim() || '#16a05a',
+    bg:        document.getElementById('cBg').value.trim() || '#e8f8ef',
+    sortOrder: parseInt(document.getElementById('cSortOrder').value) || 0,
+    featured:  document.getElementById('cFeatured').value === 'true',
+  };
+  if (!body.slug || !body.name) return showAlert('cat','Slug and Name are required','error');
+  try {
+    // Try update first, then create
+    let r = await fetch(`${API}/admin/categories/${slug}`, { method:'PUT', headers:adminHeaders(), body:JSON.stringify(body) });
+    let d = await r.json();
+    if (!d.success) { // doesn't exist, create
+      r = await fetch(`${API}/admin/categories`, { method:'POST', headers:adminHeaders(), body:JSON.stringify(body) });
+      d = await r.json();
+    }
+    if (d.success) { showAlert('cat','Category saved ✅','success'); loadCategories(); }
+    else showAlert('cat', d.message, 'error');
+  } catch(e) { showAlert('cat', e.message, 'error'); }
+}
+
+// ── Banners ──────────────────────────────────────────────
+async function loadBanners() {
+  try {
+    const r = await fetch(`${API}/admin/banners`, { headers:{'x-admin-secret':secret()} });
+    const d = await r.json();
+    const tbody = document.getElementById('bannersBody');
+    tbody.innerHTML = (d.data||[]).map(b => `
+      <tr>
+        <td style="font-size:1.4rem">${b.emoji}</td>
+        <td><strong>${b.title}</strong><br><small style="color:var(--muted)">${b.subtitle||''}</small></td>
+        <td>${b.cta}</td>
+        <td>${b.sortOrder}</td>
+        <td><span class="badge ${b.active ? 'badge-green':'badge-gray'}">${b.active ? 'Active':'Off'}</span></td>
+        <td>
+          <button class="btn btn-outline" style="padding:5px 10px;font-size:.78rem" onclick="editBanner('${b._id}')">✏️</button>
+          <button class="btn btn-red" style="padding:5px 10px;font-size:.78rem;margin-left:6px" onclick="deleteBanner('${b._id}','${b.title}')">🗑</button>
+        </td>
+      </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px">No banners</td></tr>';
+  } catch(e) { showAlert('ban', e.message, 'error'); }
+}
+
+function resetBannerForm() {
+  ['bTitle','bSubtitle','bEmoji','bCta','bCtaLink','bGradient','bSortOrder','bEditId'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('bActive').value = 'true';
+  document.getElementById('banFormTitle').textContent = '➕ Add Banner';
+}
+
+async function saveBanner() {
+  const editId = document.getElementById('bEditId').value;
+  const body = {
+    title:    document.getElementById('bTitle').value.trim(),
+    subtitle: document.getElementById('bSubtitle').value.trim(),
+    emoji:    document.getElementById('bEmoji').value.trim() || '🛒',
+    cta:      document.getElementById('bCta').value.trim() || 'Shop Now',
+    ctaLink:  document.getElementById('bCtaLink').value.trim(),
+    gradient: document.getElementById('bGradient').value.trim(),
+    sortOrder:parseInt(document.getElementById('bSortOrder').value) || 0,
+    active:   document.getElementById('bActive').value === 'true',
+  };
+  if (!body.title) return showAlert('ban','Title is required','error');
+  try {
+    const url    = editId ? `${API}/admin/banners/${editId}` : `${API}/admin/banners`;
+    const method = editId ? 'PUT' : 'POST';
+    const r = await fetch(url, { method, headers:adminHeaders(), body:JSON.stringify(body) });
+    const d = await r.json();
+    if (d.success) { showAlert('ban','Banner saved ✅','success'); resetBannerForm(); loadBanners(); }
+    else showAlert('ban', d.message, 'error');
+  } catch(e) { showAlert('ban', e.message, 'error'); }
+}
+
+async function deleteBanner(id, title) {
+  if (!confirm(`Delete banner "${title}"?`)) return;
+  try {
+    const r = await fetch(`${API}/admin/banners/${id}`, { method:'DELETE', headers:{'x-admin-secret':secret()} });
+    const d = await r.json();
+    if (d.success) { showAlert('ban','Deleted ✅','success'); loadBanners(); }
+  } catch(e) { showAlert('ban', e.message, 'error'); }
+}
+
+// ── CSV Upload ───────────────────────────────────────────
+function handleFileSelect(type) {
+  const file = document.getElementById(type+'CsvFile').files[0];
+  document.getElementById(type+'FileName').textContent = file ? file.name : 'No file selected';
+}
+
+async function uploadCSV(type) {
+  const fileMap = { products: 'prodCsvFile', categories: 'catCsvFile', subcategories: 'subCsvFile' };
+  const btnMap  = { products: 'prodUploadBtn', categories: 'catUploadBtn', subcategories: 'subUploadBtn' };
+  const nameMap = { products: 'prodFileName', categories: 'catFileName', subcategories: 'subFileName' };
+  const labelMap= { products: 'Products', categories: 'Categories', subcategories: 'Subcategories' };
+  const urlMap  = {
+    products:      `${API}/admin/products/csv`,
+    categories:    `${API}/admin/categories/csv`,
+    subcategories: `${API}/admin/subcategories/csv`,
+  };
+
+  const fileInput = document.getElementById(fileMap[type]);
+  const file = fileInput.files[0];
+  if (!file) return showAlert('csv','Please select a CSV file first','error');
+  if (!secret()) return showAlert('csv','Enter admin secret key first','error');
+
+  const btn = document.getElementById(btnMap[type]);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin">⟳</span> Uploading…';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const r = await fetch(urlMap[type], {
+      method: 'POST',
+      headers: { 'x-admin-secret': secret() },
+      body: formData,
+    });
+    const d = await r.json();
+
+    if (d.success) {
+      showAlert('csv', `✅ ${d.message} — Inserted: ${d.inserted}, Updated: ${d.updated}`, 'success');
+      fileInput.value = '';
+      document.getElementById(nameMap[type]).textContent = 'No file selected';
+    } else {
+      const errMsg = d.errors ? d.errors.join('\n') : d.message;
+      showAlert('csv', '❌ ' + errMsg, 'error');
+    }
+  } catch(e) {
+    showAlert('csv', '❌ Upload failed: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '📤 Upload ' + labelMap[type];
+  }
+}
+
+function downloadSampleCSV(e, type) {
+  e.preventDefault();
+  const configs = {
+    products: {
+      headers: 'name,unit,price,oldPrice,emoji,imageUrl,badge,categorySlug,subcategorySlug,stock,featured,active,tags',
+      sample:  '\nFresh Broccoli,500g,48,60,🥦,https://storage.googleapis.com/bucket/broccoli.jpg,20% OFF,vegetables,leafy,100,true,true,organic\nPotato,1 kg,28,,🥔,,vegetables,root,500,true,true,',
+    },
+    categories: {
+      headers: 'slug,name,emoji,imageUrl,color,bg,sub,sortOrder,featured,active',
+      sample:  '\ngroceries,Groceries,🛒,https://storage.googleapis.com/bucket/groceries.jpg,#2a7d4f,#eaf7f0,Wheat Rice Oil…,1,true,true\nvegetables,Vegetables,🥦,https://storage.googleapis.com/bucket/veg.jpg,#1a9e5f,#f0faf4,Leafy Root & More,2,true,true',
+    },
+    subcategories: {
+      headers: 'slug,name,emoji,imageUrl,categorySlug,sortOrder,featured,active',
+      sample:  '\nleafy,Leafy Greens,🥬,https://storage.googleapis.com/bucket/leafy.jpg,vegetables,1,false,true\nroot,Root Veggies,🥔,https://storage.googleapis.com/bucket/root.jpg,vegetables,2,false,true',
+    },
+  };
+  const { headers, sample } = configs[type] || configs.products;
+  const blob = new Blob([headers + sample], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = `sample-${type}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── Init ─────────────────────────────────────────────────
+loadStats();
+loadCategories(true);
+</script>
+</body>
+</html>
