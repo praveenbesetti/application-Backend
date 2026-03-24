@@ -50,6 +50,12 @@ const apiLimiter = rateLimit({
 app.use('/api/auth', authLimiter);
 app.use('/api',      apiLimiter);
 
+app.use('/api/auth',       require('./routes/auth.routes'));
+app.use('/api/categories', require('./routes/category.routes'));
+app.use('/api/products',   require('./routes/product.routes'));
+app.use('/api/banners',    require('./routes/banner.routes'));
+app.use('/api/cart',       require('./routes/cart.routes'));
+app.use('/api/admin',      require('./routes/admin.routes'));
 // ── Health check ───────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.0.0', ts: new Date() });

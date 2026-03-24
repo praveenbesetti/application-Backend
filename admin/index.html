@@ -392,49 +392,13 @@ tr:hover td{background:#f8fafc}
             <strong>Required columns:</strong>
             <code>slug</code> <code>name</code><br><br>
             <strong>Optional:</strong>
-            <code>emoji</code> <code>imageUrl</code> <code>color</code> <code>bg</code> <code>sub</code> <code>sortOrder</code> <code>featured</code> <code>active</code><br><br>
-            <strong>Example row:</strong><br>
-            <code>vegetables,Vegetables,🥦,https://storage.googleapis.com/bucket/veg.jpg,#1a9e5f,#f0faf4,Leafy Root & More,2,true,true</code>
+            <code>emoji</code> <code>color</code> <code>bg</code> <code>sub</code> <code>sortOrder</code> <code>featured</code> <code>active</code>
           </div>
 
           <br>
           <button class="btn btn-green" onclick="uploadCSV('categories')" id="catUploadBtn">
             📤 Upload Categories
           </button>
-          <a href="#" style="margin-left:12px;font-size:.84rem;color:var(--green)" onclick="downloadSampleCSV(event,'categories')">
-            ⬇️ Download Sample CSV
-          </a>
-        </div>
-
-        <div class="card">
-          <h3>📤 Upload Subcategories CSV</h3>
-          <p style="color:var(--muted);font-size:.86rem;margin-bottom:16px">
-            Upload subcategories for any category. Existing subcategories (same slug + category) will be updated.
-          </p>
-
-          <div class="upload-zone" id="subUploadZone">
-            <input type="file" id="subCsvFile" accept=".csv" onchange="handleFileSelect('sub')"/>
-            <div class="icon">📄</div>
-            <p>Drop CSV file here or click to browse</p>
-            <span id="subFileName">No file selected</span>
-          </div>
-
-          <div class="csv-hint">
-            <strong>Required columns:</strong>
-            <code>slug</code> <code>name</code> <code>categorySlug</code><br><br>
-            <strong>Optional:</strong>
-            <code>emoji</code> <code>imageUrl</code> <code>sortOrder</code> <code>featured</code> <code>active</code><br><br>
-            <strong>Example row:</strong><br>
-            <code>leafy,Leafy Greens,🥬,https://storage.googleapis.com/bucket/leafy.jpg,vegetables,1,false,true</code>
-          </div>
-
-          <br>
-          <button class="btn btn-green" onclick="uploadCSV('subcategories')" id="subUploadBtn">
-            📤 Upload Subcategories
-          </button>
-          <a href="#" style="margin-left:12px;font-size:.84rem;color:var(--green)" onclick="downloadSampleCSV(event,'subcategories')">
-            ⬇️ Download Sample CSV
-          </a>
         </div>
       </div>
 
@@ -720,22 +684,13 @@ function handleFileSelect(type) {
 }
 
 async function uploadCSV(type) {
-  const fileMap = { products: 'prodCsvFile', categories: 'catCsvFile', subcategories: 'subCsvFile' };
-  const btnMap  = { products: 'prodUploadBtn', categories: 'catUploadBtn', subcategories: 'subUploadBtn' };
-  const nameMap = { products: 'prodFileName', categories: 'catFileName', subcategories: 'subFileName' };
-  const labelMap= { products: 'Products', categories: 'Categories', subcategories: 'Subcategories' };
-  const urlMap  = {
-    products:      `${API}/admin/products/csv`,
-    categories:    `${API}/admin/categories/csv`,
-    subcategories: `${API}/admin/subcategories/csv`,
-  };
-
-  const fileInput = document.getElementById(fileMap[type]);
+  const fileInput = document.getElementById(type==='products' ? 'prodCsvFile' : 'catCsvFile');
   const file = fileInput.files[0];
   if (!file) return showAlert('csv','Please select a CSV file first','error');
   if (!secret()) return showAlert('csv','Enter admin secret key first','error');
 
-  const btn = document.getElementById(btnMap[type]);
+  const btnId = type==='products' ? 'prodUploadBtn' : 'catUploadBtn';
+  const btn = document.getElementById(btnId);
   btn.disabled = true;
   btn.innerHTML = '<span class="spin">⟳</span> Uploading…';
 
@@ -743,7 +698,11 @@ async function uploadCSV(type) {
   formData.append('file', file);
 
   try {
-    const r = await fetch(urlMap[type], {
+    const url = type === 'products'
+      ? `${API}/admin/products/csv`
+      : `${API}/admin/categories/csv`;
+
+    const r = await fetch(url, {
       method: 'POST',
       headers: { 'x-admin-secret': secret() },
       body: formData,
@@ -753,7 +712,7 @@ async function uploadCSV(type) {
     if (d.success) {
       showAlert('csv', `✅ ${d.message} — Inserted: ${d.inserted}, Updated: ${d.updated}`, 'success');
       fileInput.value = '';
-      document.getElementById(nameMap[type]).textContent = 'No file selected';
+      document.getElementById(type==='products' ? 'prodFileName' : 'catFileName').textContent = 'No file selected';
     } else {
       const errMsg = d.errors ? d.errors.join('\n') : d.message;
       showAlert('csv', '❌ ' + errMsg, 'error');
@@ -762,27 +721,18 @@ async function uploadCSV(type) {
     showAlert('csv', '❌ Upload failed: ' + e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '📤 Upload ' + labelMap[type];
+    btn.innerHTML = '📤 Upload ' + (type==='products' ? 'Products' : 'Categories');
   }
 }
 
 function downloadSampleCSV(e, type) {
   e.preventDefault();
-  const configs = {
-    products: {
-      headers: 'name,unit,price,oldPrice,emoji,imageUrl,badge,categorySlug,subcategorySlug,stock,featured,active,tags',
-      sample:  '\nFresh Broccoli,500g,48,60,🥦,https://storage.googleapis.com/bucket/broccoli.jpg,20% OFF,vegetables,leafy,100,true,true,organic\nPotato,1 kg,28,,🥔,,vegetables,root,500,true,true,',
-    },
-    categories: {
-      headers: 'slug,name,emoji,imageUrl,color,bg,sub,sortOrder,featured,active',
-      sample:  '\ngroceries,Groceries,🛒,https://storage.googleapis.com/bucket/groceries.jpg,#2a7d4f,#eaf7f0,Wheat Rice Oil…,1,true,true\nvegetables,Vegetables,🥦,https://storage.googleapis.com/bucket/veg.jpg,#1a9e5f,#f0faf4,Leafy Root & More,2,true,true',
-    },
-    subcategories: {
-      headers: 'slug,name,emoji,imageUrl,categorySlug,sortOrder,featured,active',
-      sample:  '\nleafy,Leafy Greens,🥬,https://storage.googleapis.com/bucket/leafy.jpg,vegetables,1,false,true\nroot,Root Veggies,🥔,https://storage.googleapis.com/bucket/root.jpg,vegetables,2,false,true',
-    },
-  };
-  const { headers, sample } = configs[type] || configs.products;
+  const headers = type === 'products'
+    ? 'name,unit,price,oldPrice,emoji,badge,categorySlug,subcategoryId,stock,featured,active,tags'
+    : 'slug,name,emoji,color,bg,sub,sortOrder,featured,active';
+  const sample = type === 'products'
+    ? '\nAashirvaad Atta,5 kg,249,290,🌾,BEST SELLER,groceries,atta,999,true,true,organic|bestseller\nTata Salt,1 kg,22,,🧂,,groceries,sugar,999,false,true,'
+    : '\ngroceries,Groceries,🛒,#2a7d4f,#eaf7f0,Wheat Rice Oil…,1,true,true\nvegetables,Vegetables,🥦,#1a9e5f,#f0faf4,Leafy Root & More,2,true,true';
   const blob = new Blob([headers + sample], {type:'text/csv'});
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement('a');
