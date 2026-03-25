@@ -1,59 +1,64 @@
 const crypto =require('crypto')
 const {State, District, Mandal, Secretariat}=require('../models/surveySchemas')
-const Survey = require('../models/SurveySchema')
+const {Survey} = require('../models/SurveySchema')
 const mongoose = require('mongoose');
+const { generateAgentId } = require('../../generateId');
 
-
-
-function generateRandomLetters(length) {
-    return crypto.randomBytes(length).toString('hex').slice(0, length).toUpperCase();
-}
 
 
 
  const submitSurveyForm = async (req, res) => {
     try {
-        const { villageId, surveyorId } = req.body;
-        req.body.surveyId = `${generateRandomLetters(3)}-${crypto.randomInt(100000000, 999999999)}`;
+        const { 
+            villageId, 
+            surveyorId, 
+            stateName, 
+            districtName, 
+            MandalName, 
+            VillageName 
+        } = req.body;
+    
+        // 1. FIX: Map the local variables to the keys expected by generateAgentId
+        req.body.surveyId = generateAgentId({ 
+            state: stateName, 
+            district: districtName, 
+            mandal: MandalName, // This satisfies the !mandal check
+            village: VillageName,
+            user:  true
+        });
+
+        // 2. Add the survey (This happens regardless of surveyorId)
         const survey = new Survey(req.body);
         await survey.save();
 
-        const updatedVillage = await Secretariat.findOneAndUpdate(
-            { 
-                _id: new mongoose.Types.ObjectId(villageId), 
-                "subagents.surveyorId": surveyorId          
-            },
-            { 
-                $inc: { 
-                    "subagents.$.count": 1    
-                } 
-            },
-            { new: true }
-        );
+        // 3. LOGIC: If surveyorId exists AND villageId is not empty, update count
+        if (surveyorId && villageId) {
+            const updatedVillage = await Secretariat.findOneAndUpdate(
+                { 
+                    _id: new mongoose.Types.ObjectId(villageId), 
+                    "subagents.surveyorId": surveyorId  // Ensure this matches your Schema (subagents vs subAgent)
+                },
+                { 
+                    $inc: { "subagents.$.count": 1 } 
+                },
+                { new: true }
+            );
 
-        // 4. Check if the update worked
-        if (!updatedVillage) {
-            console.log(`❌ Update failed: No village with ID ${villageId} found containing surveyor ${surveyorId}`);
-            return res.status(201).json({
-                success: true,
-                message: "Survey saved, but failed to update sub-agent count.",
-                surveyId: survey.surveyId
-            });
+            if (!updatedVillage) {
+                console.log(`⚠️ Survey saved, but surveyor ${surveyorId} not found in village ${villageId}`);
+            }
         }
 
-        // 5. Success Response with the fresh count
-        const agentData = updatedVillage.subagents.find(a => a.surveyorId === surveyorId);
-
+        // 4. Success Response
         res.status(201).json({
             success: true,
-            message: "Survey saved and count updated",
-            surveyId: survey.surveyId,
-            agentCount: agentData?.count || 0
+            message: "Survey saved successfully",
+            surveyId: survey.surveyId
         });
 
     } catch (err) {
         console.error("Submit Error:", err.message);
-        res.status(500).json({ error: "Internal server error: " + err.message });
+        res.status(400).json({ error: err.message });
     }
 };
 

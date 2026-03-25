@@ -13,7 +13,7 @@ const SurveySchema = new mongoose.Schema({
     wardArea: String,
     doorNumber: String,
     familyHead: String,
-    mobile: String,
+    mobile: [String],
     stateName: String,
     districtName: String,
     MandalName: String,

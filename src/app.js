@@ -24,6 +24,7 @@ const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
+  optionsSuccessStatus: 200 // ADD THIS LINE: Essential for Android APKs
 };
 
 app.use(cors(corsOptions));
