@@ -10,6 +10,7 @@ const { parse }    = require('csv-parse');
 const xlsx         = require('xlsx');
 const errorHandler = require('./middleware/errorHandler');
 const { processAllRows } = require('./controllers/upsert');
+const { authenticateUser } = require('./controllers/authController');
 
 const app    = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -66,7 +67,7 @@ app.get('/health', (req, res) => {
 
 // ── API Routes ─────────────────────────────────────────────
 // Survey routes — all explicit, no catch-all /api mount
-app.use('/api/survey', require('./routes/authRouter'));
+app.post('/api/survey/login',authenticateUser);
 app.use('/api/districts',   require('./routes/district'));
 app.use('/api/mandals',     require('./routes/mandalRoute'));
 app.use('/api/villages',    require('./routes/villagesRoute'));
