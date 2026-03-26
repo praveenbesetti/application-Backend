@@ -78,29 +78,46 @@ const addSubAgent = async (req, res) => {
 };
 
 
- const updateSubAgent = async (req, res) => {
+const updateSubAgent = async (req, res) => {
     try {
         const { villageId, agentId } = req.params;
-        const { name, phoneNumber, username, password, token, isAuthorized } = req.body;
+        const { name, phoneNumber, username, password, active, delete: del } = req.body;
 
         const updateFields = {};
-        if (name !== undefined) updateFields["subagents.$.name"] = name;
-        if (phoneNumber !== undefined) updateFields["subagents.$.phone"] = phoneNumber;
-        if (username !== undefined) updateFields["subagents.$.username"] = username;
-        if (password !== undefined) updateFields["subagents.$.password"] = password;
-        if (token !== undefined) updateFields["subagents.$.token"] = token;
-        if (isAuthorized !== undefined) updateFields["subagents.$.isAuthorized"] = isAuthorized;
+
+        // 1. Matches "name" in AgentsSchema
+        if (name !== undefined) updateFields["subAgent.$.name"] = name;
+        
+        // 2. Matches "phone" in AgentsSchema
+        if (phoneNumber !== undefined) updateFields["subAgent.$.phone"] = phoneNumber;
+        
+        // 3. FIXED: Matches "userName" (Capital N) in AgentsSchema
+        if (username !== undefined) updateFields["subAgent.$.userName"] = username;
+        
+        // 4. Matches "password" in AgentsSchema
+        if (password !== undefined) updateFields["subAgent.$.password"] = password;
+        
+        // 5. Matches "delete" in AgentsSchema (using 'del' from destructuring)
+        if (del !== undefined) updateFields["subAgent.$.delete"] = del;
+        
+        // 6. Matches "active" in AgentsSchema
+        if (active !== undefined) updateFields["subAgent.$.active"] = active;
+
+       
 
         const village = await Secretariat.findOneAndUpdate(
-            { _id: villageId, "subagents._id": agentId },
+            { _id: villageId, "subAgent._id": agentId },
             { $set: updateFields },
             { new: true, runValidators: true }
         );
 
-        if (!village) return res.status(404).json({ success: false, message: "Not found" });
+        if (!village) {
+            return res.status(404).json({ success: false, message: "Secretariat or Agent not found" });
+        }
 
         res.json({ success: true, data: village });
     } catch (err) {
+        console.error("Update Error:", err);
         res.status(500).json({ success: false, error: err.message });
     }
 };
