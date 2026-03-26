@@ -10,7 +10,7 @@ const State = require('./stateRoute.js');
 
 const router = express.Router();
 
-router.use('/auth', Auth);
+router.use('/survey/auth', Auth);
 router.use('/districts', District);
 router.use('/mandals', Mandal);
 router.use('/villages', Village);
