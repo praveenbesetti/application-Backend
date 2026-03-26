@@ -121,20 +121,22 @@ const getSubagents = async (req, res) => {
 
 const getVillages = async (req, res) => {
     try {
-        // 'name _id' ensures we only pick those two fields
-        // '-_id' can be used if you didn't want the ID, but here we want both
         const villages = await Secretariat.find(
             { mandal_id: req.params.mandalId }, 
-            'name _id' 
+            { name: 1, _id: 1 } // Use the object-style projection to be explicit
         ).lean();
 
-        // If no villages found, return empty array to prevent frontend crashes
         if (!villages || villages.length === 0) {
             return res.status(200).json([]);
         }
 
-        // Returns: [{ _id: "...", name: "..." }, ...]
-        res.json(villages); 
+        // Mapping manually to ensure the structure is exactly what you want
+        const cleanedVillages = villages.map(v => ({
+            _id: v._id.toString(), // Ensure _id is a string
+            name: v.name
+        }));
+
+        res.json(cleanedVillages); 
     } catch (err) {
         res.status(500).json({ error: "Server Error: " + err.message });
     }
