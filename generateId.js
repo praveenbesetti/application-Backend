@@ -8,23 +8,21 @@
  *   KSMLM_SA_YYYYMMDD_State_District_Mandal_Village_XXXXXX
  */
 
-function generateAgentId({ state, district, mandal, village } = {}) {
+function generateAgentId({ state, district, mandal, village, user } = {}) {
   // ── Validate required fields ──────────────────────────────────
   if (!state)    throw new Error("state is required");
   if (!district) throw new Error("district is required");
   if (!mandal)   throw new Error("mandal is required");
 
-  // ── Agent type ────────────────────────────────────────────────
-  const agentType = village ? "SA" : "MA";
+  // ── Agent type logic ──────────────────────────────────────────
+  // Priority: User (USR) > Village (SA) > Mandal (MA)
+  let agentType = "MA"; 
+  if (village) agentType = "SA";
+  if (user)    agentType = "USR"; 
 
-  // ── Date: YYYYMMDD ────────────────────────────────────────────
   const now   = new Date();
-  const year  = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day   = String(now.getDate()).padStart(2, "0");
-  const date  = `${year}${month}${day}`;
+  const date  = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 
-  // ── Format name: remove spaces, PascalCase ────────────────────
   function formatName(name) {
     return String(name)
       .trim()
@@ -33,10 +31,8 @@ function generateAgentId({ state, district, mandal, village } = {}) {
       .join("");
   }
 
-  // ── Random 6-digit number ─────────────────────────────────────
   const random = String(Math.floor(100000 + Math.random() * 900000));
 
-  // ── Build ID parts ────────────────────────────────────────────
   const parts = [
     "KSMCM",
     agentType,
@@ -47,7 +43,6 @@ function generateAgentId({ state, district, mandal, village } = {}) {
   ];
 
   if (village) parts.push(formatName(village));
-
   parts.push(random);
 
   return parts.join("_");

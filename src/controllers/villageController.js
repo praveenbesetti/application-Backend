@@ -2,6 +2,13 @@ const { generateAgentId } = require('../../generateId');
 const crypto = require('crypto'); // Ensure this is at the top of your file
 const { Secretariat } = require('../models/surveySchemas');
 
+
+const generate6HexToken = () => {
+    // 3 bytes = 6 hex characters (0-9, A-F)
+    return crypto.randomBytes(3).toString('hex').toUpperCase();
+};
+
+// Example Output: "4A2B9C"
 const addSubAgent = async (req, res) => {
     try {
         const { villageId } = req.params;
@@ -46,6 +53,7 @@ const addSubAgent = async (req, res) => {
             password: password || '',
             AgentId: AgentId,
             count: 0,
+            token:generate6HexToken(),
             houseHolds: Number(houseHolds) || 0,
             active: active !== undefined ? active : true, // status flag
             delete: isDeleted !== undefined ? isDeleted : false // del flag
@@ -111,16 +119,26 @@ const getSubagents = async (req, res) => {
     }
 };
 
- const getVillages= async (req, res) => {
+const getVillages = async (req, res) => {
     try {
-        const villages = await Secretariat.find({ mandal_id: req.params.mandalId }, 'name').lean();
-        if (!villages || villages.length === 0) return res.status(200).json([]);
-        res.json(villages.map(v => v.name));
+        // 'name _id' ensures we only pick those two fields
+        // '-_id' can be used if you didn't want the ID, but here we want both
+        const villages = await Secretariat.find(
+            { mandal_id: req.params.mandalId }, 
+            'name _id' 
+        ).lean();
+
+        // If no villages found, return empty array to prevent frontend crashes
+        if (!villages || villages.length === 0) {
+            return res.status(200).json([]);
+        }
+
+        // Returns: [{ _id: "...", name: "..." }, ...]
+        res.json(villages); 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ error: "Server Error: " + err.message });
     }
 };
-
  const getVillagesByMandals = async (req, res) => {
     try {
         const { mandalId } = req.params;

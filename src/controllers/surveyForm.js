@@ -24,27 +24,29 @@ const { generateAgentId } = require('../../generateId');
             district: districtName, 
             mandal: MandalName, // This satisfies the !mandal check
             village: VillageName,
-            user:  true
+            user: surveyorId ? false: true
         });
 
         // 2. Add the survey (This happens regardless of surveyorId)
         const survey = new Survey(req.body);
         await survey.save();
-
-        // 3. LOGIC: If surveyorId exists AND villageId is not empty, update count
+       console.log(surveyorId,villageId)
+       
         if (surveyorId && villageId) {
             const updatedVillage = await Secretariat.findOneAndUpdate(
                 { 
                     _id: new mongoose.Types.ObjectId(villageId), 
-                    "subagents.surveyorId": surveyorId  // Ensure this matches your Schema (subagents vs subAgent)
+                    "subAgent.AgentId": surveyorId  
                 },
                 { 
-                    $inc: { "subagents.$.count": 1 } 
+                    $inc: { "subAgent.$.count": 1 } 
                 },
                 { new: true }
             );
 
             if (!updatedVillage) {
+                // If it still fails, it means the surveyorId (KSMCM_SA...) 
+                // sent from mobile doesn't exactly match the AgentId stored in MongoDB
                 console.log(`⚠️ Survey saved, but surveyor ${surveyorId} not found in village ${villageId}`);
             }
         }
