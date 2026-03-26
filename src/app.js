@@ -74,7 +74,7 @@ app.use('/api/cart',       require('./routes/cart.routes'));
 app.use('/api/admin',      require('./routes/admin.routes'));
 
 // Main Route handler (Surveys, Districts, Mandals, etc.)
-app.use('/api/survey', Route);
+app.use('/api', Route);
 
 // ── Admin Pages ────────────────────────────────────────────
 app.get('/admin',  (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'index.html')));
