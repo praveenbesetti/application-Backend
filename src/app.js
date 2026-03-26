@@ -9,7 +9,6 @@ const fs           = require('fs');
 const { parse }    = require('csv-parse');
 const xlsx         = require('xlsx');
 const errorHandler = require('./middleware/errorHandler');
-const Route        = require('./routes/index');
 const { processAllRows } = require('./controllers/upsert');
 
 const app    = express();
@@ -24,17 +23,17 @@ const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-secret'],
-  optionsSuccessStatus: 200 // ADD THIS LINE: Essential for Android APKs
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // ← Handle ALL preflight requests
+app.options('*', cors(corsOptions));
 
 // ── Security ───────────────────────────────────────────────
 app.use(helmet({
   contentSecurityPolicy: false,
-  crossOriginResourcePolicy: false,   // ← Stops helmet blocking cross-origin
-  crossOriginEmbedderPolicy: false,   // ← Stops helmet blocking embeds
+  crossOriginResourcePolicy: false,
+  crossOriginEmbedderPolicy: false,
 }));
 
 // ── Debug Logger (remove in production) ───────────────────
@@ -65,17 +64,24 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', env: process.env.NODE_ENV, version: '2.0.0', ts: new Date() });
 });
 
-// ── API Routes (ORDER MATTERS) ─────────────────────────────
-app.use('/api', Route);
-app.use('/api/auth',       require('./routes/auth.routes'));
-app.use('/api/categories', require('./routes/category.routes'));
-app.use('/api/products',   require('./routes/product.routes'));
-app.use('/api/banners',    require('./routes/banner.routes'));
-app.use('/api/cart',       require('./routes/cart.routes'));
-app.use('/api/admin',      require('./routes/admin.routes'));
+// ── API Routes ─────────────────────────────────────────────
+// Survey routes — all explicit, no catch-all /api mount
+app.use('/api/survey/auth', require('./routes/authRouter'));
+app.use('/api/districts',   require('./routes/district'));
+app.use('/api/mandals',     require('./routes/mandalRoute'));
+app.use('/api/villages',    require('./routes/villagesRoute'));
+app.use('/api/surveys',     require('./routes/surveyFormRoute'));
+app.use('/api/survey-data', require('./routes/surveyDataRoute'));
+app.use('/api/states',      require('./routes/stateRoute'));
+app.use('/api/web-auth',    require('./routes/loginrouter'));
 
-// Main Route handler (Surveys, Districts, Mandals, etc.)
-
+// QuickBasket app routes
+app.use('/api/auth',        require('./routes/auth.routes'));
+app.use('/api/categories',  require('./routes/category.routes'));
+app.use('/api/products',    require('./routes/product.routes'));
+app.use('/api/banners',     require('./routes/banner.routes'));
+app.use('/api/cart',        require('./routes/cart.routes'));
+app.use('/api/admin',       require('./routes/admin.routes'));
 
 // ── Admin Pages ────────────────────────────────────────────
 app.get('/admin',  (req, res) => res.sendFile(path.join(__dirname, '..', 'admin', 'index.html')));
