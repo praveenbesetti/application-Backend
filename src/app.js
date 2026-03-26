@@ -66,7 +66,7 @@ app.get('/health', (req, res) => {
 
 // ── API Routes ─────────────────────────────────────────────
 // Survey routes — all explicit, no catch-all /api mount
-app.use('/api/survey/auth', require('./routes/authRouter'));
+app.use('/api/survey', require('./routes/authRouter'));
 app.use('/api/districts',   require('./routes/district'));
 app.use('/api/mandals',     require('./routes/mandalRoute'));
 app.use('/api/villages',    require('./routes/villagesRoute'));
