@@ -81,7 +81,7 @@ const addSubAgent = async (req, res) => {
 const updateSubAgent = async (req, res) => {
     try {
         const { villageId, agentId } = req.params;
-        const { name, phoneNumber, username, password, active, delete: del } = req.body;
+        const { name, phoneNumber, username, password, active,  del } = req.body;
 
         const updateFields = {};
 
@@ -128,7 +128,7 @@ const getSubagents = async (req, res) => {
         const subagentList = villages.map(v => ({
             villageName: v.name,
             villageId: v._id,
-            details: v.subagents
+            details: v.subAgent
         }));
         res.json(subagentList);
     } catch (err) {

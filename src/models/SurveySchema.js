@@ -10,6 +10,7 @@ const SurveySchema = new mongoose.Schema({
 
     surveyId: { type: String, unique: true },
     surveyorId: String,
+    surveyId:String,
     wardArea: String,
     doorNumber: String,
     familyHead: String,

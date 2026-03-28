@@ -1,4 +1,4 @@
-const Survey =require('../models/SurveySchema')
+const {Survey} =require('../models/SurveySchema')
 
  const getGroupedSurveyData = async (req, res) => {
     try {
@@ -192,4 +192,127 @@ const Survey =require('../models/SurveySchema')
     }
 };
 
-module.exports={getGroupedSurveyData}
+ 
+
+const getSurveys = async (req, res) => {
+    try {
+        const { 
+            page = 1, 
+            limit = 50, // Default 50 as requested
+            surveyId, 
+            stateId, 
+            districtId, 
+            mandalId, 
+            villageName,
+            search 
+        } = req.query;
+
+        // 1. Initialize empty query - if no filters, this stays {} (returns all)
+        let query = {};
+
+        // 2. Conditionally apply filters only if they exist in request
+        if (surveyId) {
+            query.surveyId = { $regex: surveyId, $options: 'i' };
+        }
+
+        // Location Filters (Mapping query params to Schema keys)
+        if (stateId) query.stateName = stateId; 
+        if (districtId) query.districtName = districtId;
+        if (mandalId) query.MandalName = mandalId;
+        if (villageName) query.VillageName = villageName;
+
+        // Search filter (Family Head or Mobile Array)
+        if (search) {
+            query.$or = [
+                { familyHead: { $regex: search, $options: 'i' } },
+                { mobile: { $regex: search } } 
+            ];
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const pageSize = parseInt(limit);
+
+        // 3. Execute - .sort({ createdAt: -1 }) ensures "latest" 50 are sent by default
+        const [surveys, totalCount] = await Promise.all([
+            Survey.find(query)
+                .sort({ createdAt: -1 }) 
+                .skip(skip)
+                .limit(pageSize)
+                .lean(),
+            Survey.countDocuments(query)
+        ]);
+
+        res.status(200).json({
+            success: true,
+            total: totalCount,
+            currentPage: parseInt(page),
+            pageSize: pageSize,
+            data: surveys
+        });
+
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: "Server Error", 
+            error: error.message 
+        });
+    }
+};
+
+const updateSurvey = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const updateData = req.body;
+
+        // Prevent changing surveyId if it's meant to be immutable
+        delete updateData.surveyId; 
+
+        const updatedSurvey = await Survey.findByIdAndUpdate(
+            id,
+            { $set: updateData },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedSurvey) {
+            return res.status(404).json({ success: false, message: "Survey not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Survey updated successfully",
+            data: updatedSurvey
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+/**
+ * DELETE /api/surveys/:id
+ * Removes a survey from the database
+ */
+const deleteSurvey = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedSurvey = await Survey.findByIdAndDelete(id);
+
+        if (!deletedSurvey) {
+            return res.status(404).json({ success: false, message: "Survey not found" });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Survey deleted successfully"
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+
+    
+   
+
+module.exports={getGroupedSurveyData,getSurveys,updateSurvey, deleteSurvey}

@@ -8,44 +8,28 @@
  *   KSMLM_SA_YYYYMMDD_State_District_Mandal_Village_XXXXXX
  */
 
-function generateAgentId({ state, district, mandal, village, user } = {}) {
-  // ── Validate required fields ──────────────────────────────────
-  if (!state)    throw new Error("state is required");
-  if (!district) throw new Error("district is required");
-  if (!mandal)   throw new Error("mandal is required");
+function generateAgentId({ village, user } = {}) {
+  
+  // Priority: User (CSM) > Village exists (SG) > Village missing (AG)
+  let prefix = "AG"; // Default: Area Agent (No village)
+  if (village) prefix = "SG"; // Sub Agent (Village exists)
+  if (user)    prefix = "CSM"; // User / Customer Manager
 
-  // ── Agent type logic ──────────────────────────────────────────
-  // Priority: User (USR) > Village (SA) > Mandal (MA)
-  let agentType = "MA"; 
-  if (village) agentType = "SA";
-  if (user)    agentType = "USR"; 
+  // ── Generate Timestamp ────────────────────────────────────────
+  const now = new Date();
+  const timestamp = 
+      now.getFullYear() +
+      String(now.getMonth() + 1).padStart(2, "0") +
+      String(now.getDate()).padStart(2, "0") +
+      String(now.getHours()).padStart(2, "0") +
+      String(now.getMinutes()).padStart(2, "0") +
+      String(now.getSeconds()).padStart(2, "0");
 
-  const now   = new Date();
-  const date  = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+  // ── Random Suffix (3 digits) to prevent collisions ────────────
+  const randomSuffix = Math.floor(100 + Math.random() * 900);
 
-  function formatName(name) {
-    return String(name)
-      .trim()
-      .split(/\s+/)
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-      .join("");
-  }
-
-  const random = String(Math.floor(100000 + Math.random() * 900000));
-
-  const parts = [
-    "KSMCM",
-    agentType,
-    date,
-    formatName(state),
-    formatName(district),
-    formatName(mandal),
-  ];
-
-  if (village) parts.push(formatName(village));
-  parts.push(random);
-
-  return parts.join("_");
+  // Example Result: CSM20260328164512942
+  return `${prefix}${timestamp}${randomSuffix}`;
 }
 
 module.exports = { generateAgentId };
