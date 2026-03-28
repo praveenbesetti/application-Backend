@@ -9,3 +9,4 @@ seed/
 genrate-csv
 image-urls.txt
 images/
+package-lock.json
