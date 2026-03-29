@@ -98,24 +98,30 @@ const AddAgentToMandal = async (req, res) => {
 const updateMandalAgent = async (req, res) => {
     try {
         const { mandalId } = req.params;
-        const { agentname, phone, username, password } = req.body;
+        const { agentname, phone, username, password, status } = req.body;
 
         const updatedMandal = await Mandal.findByIdAndUpdate(
             mandalId,
             {
                 $set: {
-                    agentname,
-                    phone,
-                    username,
-                    password
+                    // Mapping frontend data to the ManAgent sub-schema
+                    "ManAgent.name": agentname,
+                    "ManAgent.phone": phone,
+                    "ManAgent.userName": username, // Schema uses userName (capital N)
+                    "ManAgent.password": password,
+                    "ManAgent.active": status ?? true // Maps frontend 'status' to 'active'
                 }
             },
-            { new: true }
+            { new: true, runValidators: true }
         );
+
+        if (!updatedMandal) {
+            return res.status(404).json({ success: false, message: "Mandal not found" });
+        }
 
         res.json({ success: true, data: updatedMandal });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        res.status(500).json({ success: false, error: err.message });
     }
 };
 

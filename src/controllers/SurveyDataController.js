@@ -198,41 +198,48 @@ const getSurveys = async (req, res) => {
     try {
         const { 
             page = 1, 
-            limit = 50, // Default 50 as requested
-            surveyId, 
-            stateId, 
-            districtId, 
-            mandalId, 
+            limit = 50, 
+            stateName, 
+            districtName, 
+            mandalName, 
             villageName,
-            search 
+            search,      // The ID text entered
+            searchType   // Dropdown value: 'surveyId' or 'surveyorId'
         } = req.query;
 
-        // 1. Initialize empty query - if no filters, this stays {} (returns all)
         let query = {};
-
-        // 2. Conditionally apply filters only if they exist in request
-        if (surveyId) {
-            query.surveyId = { $regex: surveyId, $options: 'i' };
-        }
-
-        // Location Filters (Mapping query params to Schema keys)
-        if (stateId) query.stateName = stateId; 
-        if (districtId) query.districtName = districtId;
-        if (mandalId) query.MandalName = mandalId;
+ 
+        // 1. Location Filters
+        if (stateName) query.stateName = stateName; 
+        if (districtName) query.districtName = districtName;
+        if (mandalName) query.MandalName = mandalName;
         if (villageName) query.VillageName = villageName;
 
-        // Search filter (Family Head or Mobile Array)
-        if (search) {
-            query.$or = [
-                { familyHead: { $regex: search, $options: 'i' } },
-                { mobile: { $regex: search } } 
-            ];
+        // 2. ID-Specific Search Logic (Removed Name Search)
+        if (search && search.trim() !== "") {
+            const searchRegex = { $regex: search.trim(), $options: 'i' };
+
+            if (searchType === 'surveyId') {
+                // Search by the Form ID (e.g., "3C4-748...")
+                query.surveyId = searchRegex;
+            } 
+            else if (searchType === 'surveyorId') {
+                // Search by the Agent/Surveyor ID
+                query.surveyorId = searchRegex;
+            }
+            else {
+                // Fallback: If no type is selected, search across both ID fields
+                query.$or = [
+                    { surveyId: searchRegex },
+                    { surveyorId: searchRegex }
+                ];
+            }
         }
 
-        const skip = (parseInt(page) - 1) * parseInt(limit);
         const pageSize = parseInt(limit);
+        const skip = (parseInt(page) - 1) * pageSize;
 
-        // 3. Execute - .sort({ createdAt: -1 }) ensures "latest" 50 are sent by default
+        // 3. Execution
         const [surveys, totalCount] = await Promise.all([
             Survey.find(query)
                 .sort({ createdAt: -1 }) 
@@ -245,8 +252,8 @@ const getSurveys = async (req, res) => {
         res.status(200).json({
             success: true,
             total: totalCount,
+            totalPages: Math.ceil(totalCount / pageSize),
             currentPage: parseInt(page),
-            pageSize: pageSize,
             data: surveys
         });
 
